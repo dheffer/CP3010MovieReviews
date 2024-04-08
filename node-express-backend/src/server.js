@@ -6,6 +6,10 @@ import { fileURLToPath } from 'url';
 import multer from 'multer';
 import * as dotenv from 'dotenv' // see https://github.com/motdotla/dotenv#how-do-i-use-dotenv-with-import
 import bodyParser from 'body-parser'
+
+import mongoose from 'mongoose';
+
+
 dotenv.config()
 
 const jsonParser = bodyParser.json()
@@ -25,18 +29,54 @@ app.use(express.static(path.join(__dirname, '../posters')));
 
 const upload = multer({ dest: 'posters/' })
 
+mongoose.connect(process.env.MONGO_CONNECT, {
+})
+    .then(() => {
+        console.log('Connected to MongoDB');
+    })
+    .catch((error) => {
+        console.error('Error connecting to MongoDB:', error);
+    });
+
+const customerSchema = new mongoose.Schema({
+    name: String,
+    movie: String,
+    email: {
+        type: String,
+        required: true
+    }
+});
+
+const Customer = mongoose.model('Customer', customerSchema);
+
+app.post('/api/addInfo', (req, res) => {
+
+    const { name, movie, email } = req.body;
+
+    if (!name || !movie || !email) {
+        return res.status(206).json({ error: 'Missing required fields' });
+    }
+
+    const newCustomer = new Customer({
+        name: name,
+        movie: movie,
+        email: email
+    });
+
+    newCustomer.save()
+        .then(() => {
+            res.status(200).json({ message: 'Customer info saved successfully' });
+        })
+        .catch((error) => {
+            res.status(500).json({ error: 'Failed to save customer info' });
+        });
+});
+
+
+
 app.get(/^(?!\/api).+/, (req, res) => {
   res.sendFile(path.join(__dirname, '../build/index.html'))
 });
-
-/*const movieData = JSON.parse(fs.readFileSync('./movies.json'));
-console.log(movieData);
-/*let movieData = [
-    {"title":"Terminator 2"},
-    {"title":"Rocky IV"},
-    {"title":"Titanic"},
-    {"title":"Die Hard"}
-];*/
 
 app.get('/api/movies', async (req, res) => {
     
@@ -49,6 +89,7 @@ app.get('/api/movies', async (req, res) => {
 
     const movieData = await db.collection('reviews').find({}).toArray();
     console.log(movieData);
+    console.log(res.statusCode);
     res.json(movieData);
 
 })
