@@ -30,6 +30,8 @@ app.use(express.static(path.join(__dirname, '../posters')));
 const upload = multer({ dest: 'posters/' })
 
 mongoose.connect(process.env.MONGO_CONNECT, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
 })
     .then(() => {
         console.log('Connected to MongoDB');
@@ -37,6 +39,10 @@ mongoose.connect(process.env.MONGO_CONNECT, {
     .catch((error) => {
         console.error('Error connecting to MongoDB:', error);
     });
+
+app.get(/^(?!\/api).+/, (req, res) => {
+  res.sendFile(path.join(__dirname, '../build/index.html'))
+});
 
 const customerSchema = new mongoose.Schema({
     name: String,
@@ -47,14 +53,16 @@ const customerSchema = new mongoose.Schema({
     }
 });
 
+app.use(bodyParser.json());
 const Customer = mongoose.model('Customer', customerSchema);
-
 app.post('/api/addInfo', (req, res) => {
 
+
     const { name, movie, email } = req.body;
+    console.log(req.body);
 
     if (!name || !movie || !email) {
-        return res.status(206).json({ error: 'Missing required fields' });
+        return res.status(500).json({ error: 'Missing required fields' });
     }
 
     const newCustomer = new Customer({
@@ -72,11 +80,6 @@ app.post('/api/addInfo', (req, res) => {
         });
 });
 
-
-
-app.get(/^(?!\/api).+/, (req, res) => {
-  res.sendFile(path.join(__dirname, '../build/index.html'))
-});
 
 app.get('/api/movies', async (req, res) => {
     
